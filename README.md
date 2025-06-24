@@ -1,25 +1,14 @@
 # ISSTracker
 An ISS tracker app for the RPi.
 ## Instalation
-To install, download the installer.sh from the releases page onto your RPi's home directory. Then run the following commands:
+To install, Run this for RPi:
 ```bash
-chmod +x installer.sh
+wget https://github.com/penderact13/ISSTracker/releases/download/0.6/installer.sh && chmod +x launcher.sh && ./launcher.sh
 ```
-Then run it:
-```bash
-./installer.sh
-```
-Everything will be installed from there.
 ## Deletion
-Just run these to delete:
+Just run this to delete:
 ```bash
 sudo rm /usr/local/bin/iss-tracker.py
-sudo rm /home/pi/iss-tracker.deb
-sudo rm -r /home/pi/ISSTracker
-```
-or
-```bash
-sudo rm -f /usr/local/bin/iss-tracker.py /home/pi/iss-tracker.deb && sudo rm -rf /home/pi/ISSTracker
 ```
 ## Preview
 ...
