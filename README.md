@@ -10,5 +10,12 @@ Then run it:
 ./installer.sh
 ```
 Everything will be installed from there.
+## Deletion
+Just run these to delete:
+```bash
+sudo rm /usr/local/bin/iss-tracker.py
+sudo rm /home/pi/iss-tracker.deb
+sudo rm -r /home/pi/ISSTracker
+```
 ## Preview
 ...
