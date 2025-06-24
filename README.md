@@ -17,5 +17,9 @@ sudo rm /usr/local/bin/iss-tracker.py
 sudo rm /home/pi/iss-tracker.deb
 sudo rm -r /home/pi/ISSTracker
 ```
+or
+```bash
+sudo rm -f /usr/local/bin/iss-tracker.py /home/pi/iss-tracker.deb && sudo rm -rf /home/pi/ISSTracker
+```
 ## Preview
 ...
