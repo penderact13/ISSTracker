@@ -122,4 +122,21 @@ class ISSTrackerApp:
 
         self.root.after(100, self.update_display)
 
-    de
+    def latlon_to_xy(self, lat, lon, width, height):
+        x = (lon + 180) * (width / 360)
+        y = (90 - lat) * (height / 180)
+        return x, y
+
+    def go_forward(self, event):
+        self.time_offset += timedelta(minutes=1)
+
+    def go_back(self, event):
+        self.time_offset -= timedelta(minutes=1)
+
+    def reset_time(self, event):
+        self.time_offset = timedelta(seconds=0)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ISSTrackerApp(root)
+    root.mainloop()
