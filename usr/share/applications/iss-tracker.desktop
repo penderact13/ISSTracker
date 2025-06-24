@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ISS Tracker
+Comment=Track ISS and your Pi location with live world map
+Exec=/usr/local/bin/iss-tracker.py
+Icon=utilities-terminal
+Terminal=false
+Categories=Education;Science;Utility;
