@@ -3,7 +3,7 @@
 import tkinter as tk
 from tkinter import Canvas
 import requests
-from sgp4.api import Satrec, WGS72, jday
+from sgp4.api import Satrec, jday
 from datetime import datetime, timedelta
 import math
 import cartopy.crs as ccrs
@@ -23,14 +23,6 @@ def generate_map():
     plt.close(fig)
     return Image.open(buf)
 
-def get_pi_location():
-    try:
-        response = requests.get("http://ip-api.com/json/")
-        data = response.json()
-        return data['lat'], data['lon']
-    except:
-        return 0, 0
-
 def fetch_iss_tle():
     url = "https://celestrak.org/NORAD/elements/stations.txt"
     tle_data = requests.get(url).text
@@ -39,6 +31,26 @@ def fetch_iss_tle():
         if "ISS (ZARYA)" in line:
             return lines[i+1], lines[i+2]
     return None, None
+
+def eci_to_latlon(pos, jd):
+    # Calculate GMST (Greenwich Mean Sidereal Time)
+    T = (jd - 2451545.0) / 36525.0
+    GMST = 280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T**2 - T**3 / 38710000.0
+    GMST = GMST % 360.0
+    theta = math.radians(GMST)
+
+    # ECI to ECEF rotation
+    x = pos[0]*math.cos(theta) + pos[1]*math.sin(theta)
+    y = -pos[0]*math.sin(theta) + pos[1]*math.cos(theta)
+    z = pos[2]
+
+    # Convert to lat/lon
+    r = math.sqrt(x**2 + y**2 + z**2)
+    lat = math.degrees(math.asin(z / r))
+    lon = math.degrees(math.atan2(y, x))
+    if lon > 180:
+        lon -= 360
+    return lat, lon
 
 def latlon_to_xy(lat, lon, width, height):
     x = (lon + 180) * (width / 360)
@@ -56,7 +68,6 @@ class ISSTrackerApp:
         self.tk_image = ImageTk.PhotoImage(self.image)
         self.canvas.create_image(0, 0, anchor="nw", image=self.tk_image)
 
-        self.lat, self.lon = get_pi_location()
         self.load_tle()
 
         self.time_offset = timedelta(seconds=0)
@@ -78,45 +89,45 @@ class ISSTrackerApp:
         self.canvas.delete("markers")
         self.canvas.create_image(0, 0, anchor="nw", image=self.tk_image)
 
-        x, y = latlon_to_xy(self.lat, self.lon, 800, 400)
-        self.canvas.create_oval(x-4, y-4, x+4, y+4, fill="red", tags="markers")
+        now = datetime.utcnow() + self.time_offset
+        jd, fr = jday(now.year, now.month, now.day, now.hour, now.minute, now.second + now.microsecond/1e6)
 
-        if self.satellite:
-            now = datetime.utcnow() + self.time_offset
-            jd, fr = jday(now.year, now.month, now.day, now.hour, now.minute, now.second + now.microsecond/1e6)
-            e, pos, vel = self.satellite.sgp4(jd, fr)
-            r = math.sqrt(pos[0]**2 + pos[1]**2 + pos[2]**2)
-            iss_lat = math.degrees(math.asin(pos[2] / r))
-            iss_lon = math.degrees(math.atan2(pos[1], pos[0]))
-            if iss_lon > 180:
-                iss_lon -= 360
+        # Current ISS position
+        e, pos, vel = self.satellite.sgp4(jd, fr)
+        lat, lon = eci_to_latlon(pos, jd)
+        iss_x, iss_y = latlon_to_xy(lat, lon, 800, 400)
+        self.canvas.create_oval(iss_x-4, iss_y-4, iss_x+4, iss_y+4, fill="purple", tags="markers")
 
-            iss_x, iss_y = latlon_to_xy(iss_lat, iss_lon, 800, 400)
-            self.canvas.create_oval(iss_x-4, iss_y-4, iss_x+4, iss_y+4, fill="purple", tags="markers")
+        # Future path
+        path_coords = []
+        for mins in range(0, 90, 2):
+            future_time = now + timedelta(minutes=mins)
+            jd_fut, fr_fut = jday(
+                future_time.year, future_time.month, future_time.day,
+                future_time.hour, future_time.minute,
+                future_time.second + future_time.microsecond / 1e6
+            )
+            e_fut, pos_fut, vel_fut = self.satellite.sgp4(jd_fut, fr_fut)
+            lat_fut, lon_fut = eci_to_latlon(pos_fut, jd_fut)
+            path_x, path_y = latlon_to_xy(lat_fut, lon_fut, 800, 400)
+            path_coords.append((path_x, path_y))
 
-            for mins in range(5, 90, 5):
-                future_time = now + timedelta(minutes=mins)
-                jd_fut, fr_fut = jday(
-                    future_time.year, future_time.month, future_time.day,
-                    future_time.hour, future_time.minute,
-                    future_time.second + future_time.microsecond / 1e6
-                )
-                e_fut, pos_fut, vel_fut = self.satellite.sgp4(jd_fut, fr_fut)
-                r_fut = math.sqrt(pos_fut[0]**2 + pos_fut[1]**2 + pos_fut[2]**2)
-                lat_fut = math.degrees(math.asin(pos_fut[2] / r_fut))
-                lon_fut = math.degrees(math.atan2(pos_fut[1], pos_fut[0]))
-                if lon_fut > 180:
-                    lon_fut -= 360
-                path_x, path_y = latlon_to_xy(lat_fut, lon_fut, 800, 400)
-                self.canvas.create_oval(path_x-1, path_y-1, path_x+1, path_y+1, fill="blue", tags="markers")
+        # Draw blue path line
+        for i in range(len(path_coords)-1):
+            self.canvas.create_line(path_coords[i][0], path_coords[i][1],
+                                    path_coords[i+1][0], path_coords[i+1][1],
+                                    fill="blue", width=2, tags="markers")
+
+        # Draw time label
+        self.canvas.create_text(400, 20, text=now.strftime("%Y-%m-%d %H:%M:%S UTC"), font=("Arial", 16), fill="white", tags="markers")
 
         self.root.after(1000, self.update_display)
 
     def go_forward(self, event):
-        self.time_offset += timedelta(minutes=10)
+        self.time_offset += timedelta(minutes=2)
 
     def go_back(self, event):
-        self.time_offset -= timedelta(minutes=10)
+        self.time_offset -= timedelta(minutes=2)
 
     def reset_time(self, event):
         self.time_offset = timedelta(seconds=0)
