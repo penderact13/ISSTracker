@@ -3,14 +3,13 @@
 import tkinter as tk
 from tkinter import Canvas
 import requests
-from sgp4.api import Satrec, WGS72
+from sgp4.api import Satrec, WGS72, jday
 from datetime import datetime, timedelta
 import math
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
 import io
-
 
 def generate_map():
     fig = plt.figure(figsize=(8, 4))
@@ -84,7 +83,7 @@ class ISSTrackerApp:
 
         if self.satellite:
             now = datetime.utcnow() + self.time_offset
-            jd, fr = self.satellite.jday(now.year, now.month, now.day, now.hour, now.minute, now.second + now.microsecond/1e6)
+            jd, fr = jday(now.year, now.month, now.day, now.hour, now.minute, now.second + now.microsecond/1e6)
             e, pos, vel = self.satellite.sgp4(jd, fr)
             iss_lat = math.degrees(math.asin(pos[2]/(WGS72.radiuse + pos[0]**2 + pos[1]**2 + pos[2]**2)**0.5))
             iss_lon = math.degrees(math.atan2(pos[1], pos[0]))
@@ -96,9 +95,11 @@ class ISSTrackerApp:
 
             for mins in range(5, 90, 5):
                 future_time = now + timedelta(minutes=mins)
-                jd_fut, fr_fut = self.satellite.jday(future_time.year, future_time.month, future_time.day,
-                                                     future_time.hour, future_time.minute,
-                                                     future_time.second + future_time.microsecond / 1e6)
+                jd_fut, fr_fut = jday(
+                    future_time.year, future_time.month, future_time.day,
+                    future_time.hour, future_time.minute,
+                    future_time.second + future_time.microsecond / 1e6
+                )
                 e_fut, pos_fut, vel_fut = self.satellite.sgp4(jd_fut, fr_fut)
                 lat_fut = math.degrees(math.asin(pos_fut[2]/(WGS72.radiuse + pos_fut[0]**2 + pos_fut[1]**2 + pos_fut[2]**2)**0.5))
                 lon_fut = math.degrees(math.atan2(pos_fut[1], pos_fut[0]))
