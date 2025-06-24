@@ -85,7 +85,8 @@ class ISSTrackerApp:
             now = datetime.utcnow() + self.time_offset
             jd, fr = jday(now.year, now.month, now.day, now.hour, now.minute, now.second + now.microsecond/1e6)
             e, pos, vel = self.satellite.sgp4(jd, fr)
-            iss_lat = math.degrees(math.asin(pos[2]/(WGS72.radiuse + pos[0]**2 + pos[1]**2 + pos[2]**2)**0.5))
+            r = math.sqrt(pos[0]**2 + pos[1]**2 + pos[2]**2)
+            iss_lat = math.degrees(math.asin(pos[2] / r))
             iss_lon = math.degrees(math.atan2(pos[1], pos[0]))
             if iss_lon > 180:
                 iss_lon -= 360
@@ -101,7 +102,8 @@ class ISSTrackerApp:
                     future_time.second + future_time.microsecond / 1e6
                 )
                 e_fut, pos_fut, vel_fut = self.satellite.sgp4(jd_fut, fr_fut)
-                lat_fut = math.degrees(math.asin(pos_fut[2]/(WGS72.radiuse + pos_fut[0]**2 + pos_fut[1]**2 + pos_fut[2]**2)**0.5))
+                r_fut = math.sqrt(pos_fut[0]**2 + pos_fut[1]**2 + pos_fut[2]**2)
+                lat_fut = math.degrees(math.asin(pos_fut[2] / r_fut))
                 lon_fut = math.degrees(math.atan2(pos_fut[1], pos_fut[0]))
                 if lon_fut > 180:
                     lon_fut -= 360
